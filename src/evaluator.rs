@@ -101,8 +101,8 @@ impl<'a> Parser<'a> {
                         "<" => Ok((l < r) as i32 as f64),
                         ">=" => Ok((l >= r) as i32 as f64),
                         "<=" => Ok((l <= r) as i32 as f64),
-                        "==" => Ok((l - r).abs() < 1e-6 as i32 as f64),
-                        "!=" => Ok((l - r).abs() >= 1e-6 as i32 as f64),
+                        "==" => Ok(((l - r).abs() < 1e-6) as i32 as f64),
+                        "!=" => Ok(((l - r).abs() >= 1e-6) as i32 as f64),
                         "&&" => Ok(((l.abs() > 0.5) && (r.abs() > 0.5)) as i32 as f64),
                         "||" => Ok(((l.abs() > 0.5) || (r.abs() > 0.5)) as i32 as f64),
                         _ => Err(EvalError::InvalidSyntax(format!("Unknown operator: {op}")))
