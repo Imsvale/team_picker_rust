@@ -66,8 +66,6 @@ pub fn find_best_positions(
     (best_result, best_score)
 }
 
-use crate::lineup::{StartingPosition, PositionDescription};
-
 pub fn make_lineup(
     starters: &[PickTempData],
     offense: &[(String, PositionDescription)],
