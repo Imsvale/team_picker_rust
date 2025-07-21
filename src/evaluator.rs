@@ -21,8 +21,8 @@ pub fn evaluate(player: &Player, expr: &str) -> EvalResult {
         return Err(EvalError::InvalidSyntax("Empty expression".into()));
     }
 
-    let mut parser = Parser::new(player, expr);
-    parser.parse_expression()
+    let mut parser = Parser::new(player);
+    parser.parse_expression(expr)
 }
 
 use std::f64;
@@ -30,16 +30,15 @@ use std::str::FromStr;
 
 struct Parser<'a> {
     player: &'a Player,
-    input: &'a str,
 }
 
 impl<'a> Parser<'a> {
-    fn new(player: &'a Player, input: &'a str) -> Self {
-        Parser { player, input }
+    fn new(player: &'a Player) -> Self {
+        Parser { player }
     }
 
-    fn parse_expression(&self) -> EvalResult {
-        self.parse_logic_or(self.input)
+    fn parse_expression(&self, input: &str) -> EvalResult {
+        self.parse_logic_or(input)
     }
 
     fn parse_logic_or(&self, expr: &str) -> EvalResult {
@@ -131,7 +130,8 @@ impl<'a> Parser<'a> {
             let arg_str = &expr[open_paren + 1..expr.len() - 1]; // remove closing ')'
     
             let args = Self::split_args(arg_str)?;
-            let parsed_args: Result<Vec<f64>, EvalError> = args.iter().map(|arg| self.parse_expression(arg)).collect();
+            let parsed_args: Result<Vec<f64>, EvalError> =
+                args.iter().map(|arg| self.parse_expression(arg)).collect();
             let args = parsed_args?;
     
             return match func_name.as_str() {
