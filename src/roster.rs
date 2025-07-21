@@ -9,16 +9,16 @@ use crate::player::Player;
 pub fn read_roster(path: &str) -> std::io::Result<Vec<Player>> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);
-    let mut lines = reader.lines();
+    let mut lines = reader.lines().filter_map(Result::ok);
 
     let mut players = Vec::new();
 
-    // Read header line
+    // Read and parse header line
     let header_line = loop {
         match lines.next() {
-            Some(Ok(line)) if !line.trim().is_empty() => break line,
+            Some(line) if !line.trim().is_empty() => break line,
             Some(_) => continue,
-            None => return Ok(players), // empty file
+            None => return Ok(players), // empty or malformed file
         }
     };
 
@@ -27,47 +27,52 @@ pub fn read_roster(path: &str) -> std::io::Result<Vec<Player>> {
         .map(|s| s.to_string())
         .collect();
 
-    // Remove "Name"
     if header_fields.first().map(|s| s.as_str()) != Some("Name") {
         panic!("First header column must be 'Name'");
     }
-    header_fields.remove(0);
+    header_fields.remove(0); // Remove "Name" column
 
-    // Read player entries
-    while let Some(Ok(name_line)) = lines.next() {
-        let name = name_line.trim().to_string();
+    // Read player entries (two lines per player: name, stat line)
+    while let Some(name_line) = lines.next() {
+        let name = name_line.trim();
+
         if name.is_empty() {
             continue;
         }
 
-        let meta_line = match lines.next() {
-            Some(Ok(line)) => line,
-            _ => break,
-        };
+        let name = name.strip_prefix("[CAPTAIN] ").unwrap_or(name).to_string();
 
-        // Skip token line like "#27 ..."
         let stat_line = match lines.next() {
-            Some(Ok(line)) => line,
-            _ => break,
+            Some(line) => line.trim().to_string(),
+            None => break, // end of file
         };
 
-        let mut stat_values = Vec::new();
-        for token in stat_line.split_whitespace() {
-            if let Ok(num) = token.parse::<i32>() {
-                stat_values.push(num);
-            }
+        if stat_line.is_empty() {
+            continue;
         }
 
-        if stat_values.len() != header_fields.len() {
+        let parts: Vec<&str> = stat_line.split('\t').collect();
+        if parts.len() <= 1 {
+            eprintln!("Warning: malformed stat line for player '{}'", name);
+            continue;
+        }
+
+        let stat_tokens = &parts[1..]; // Skip metadata (first field)
+
+        if stat_tokens.len() != header_fields.len() {
             eprintln!("Warning: stat count mismatch for player '{}'", name);
             continue;
         }
 
-        let stats: HashMap<String, i32> = header_fields
-            .iter()
-            .cloned()
-            .zip(stat_values.into_iter())
-            .collect();
+        let mut stats = HashMap::new();
+        for (field, value_str) in header_fields.iter().zip(stat_tokens.iter()) {
+            if let Ok(value) = value_str.trim().parse::<i32>() {
+                stats.insert(field.clone(), value);
+            } else {
+                eprintln!("Warning: invalid number '{}' for player '{}'", value_str, name);
+                continue;
+            }
+        }
 
         players.push(Player { name, stats });
     }
