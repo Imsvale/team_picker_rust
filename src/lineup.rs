@@ -48,7 +48,7 @@ pub fn find_best_positions(
                 remaining.remove(index);
             }
 
-            let (mut sub_result, sub_score) = find_best_positions(rest, &remaining);
+            let (sub_result, sub_score) = find_best_positions(rest, &remaining);
             let total = score + sub_score;
 
             if total > best_score {
@@ -113,7 +113,7 @@ pub fn optimize_lineup(
     let mut best_score;
 
     // Initial evaluation
-    let (mut best_lineup, mut score) = get_initial_lineup(&starters, reqs);
+    let (mut best_lineup, score) = get_initial_lineup(&starters, reqs);
     best_score = score;
 
     let mut improved = true;

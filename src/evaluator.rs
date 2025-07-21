@@ -4,7 +4,7 @@ use std::str::Chars;
 use crate::player::Player;
 use crate::composition::PositionRequirements;
 
-
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum EvalError {
     InvalidSyntax(String),

@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use crate::player::Player;
 use crate::composition::PositionRequirements;
-use crate::evaluator::{evaluate_position, EvalResult};
+use crate::evaluator::{evaluate_position};
 
 #[derive(Debug, Clone)]
 pub struct PickTempData {
