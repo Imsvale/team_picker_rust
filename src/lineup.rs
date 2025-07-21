@@ -104,9 +104,6 @@ pub fn get_initial_lineup(
     (lineup, total_score)
 }
 
-use crate::pick::PickTempData;
-use crate::composition::PositionRequirements;
-
 pub fn optimize_lineup(
     all_players: &[PickTempData],
     initial_lineup: Vec<PickTempData>,
