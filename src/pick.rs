@@ -5,7 +5,7 @@ use crate::player::Player;
 use crate::composition::PositionRequirements;
 use crate::evaluator::{evaluate_position, EvalResult};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PickTempData {
     pub name: String,
     pub position_scores: HashMap<String, f64>,
