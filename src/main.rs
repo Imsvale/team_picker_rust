@@ -15,6 +15,11 @@ use composition::parse_composition;
 use pick::to_pick_data;
 use lineup::optimize_lineup;
 
+fn pause() {
+    print!("\nPress 'Enter' to quit.");
+    io::stdout().flush().unwrap();
+    io::stdin().read_line(&mut String::new()).unwrap();
+}
 
 fn main() -> io::Result<()> {
     // Create default files if they don't exist
@@ -22,6 +27,19 @@ fn main() -> io::Result<()> {
 
     let players = read_roster("team_data.txt")?;
     let composition = parse_composition("composition.txt")?;
+
+    if players.len() < composition.attacking.len() {
+        println!(
+            "ERROR\n\
+            Not enough players in team_data.txt.\n\
+            Found {}, but at least {} are required.",
+            players.len(),
+            composition.attacking.len()
+        );
+        println!("\nPlease paste your team roster into team_data.txt. See the README for further details.");
+        pause();
+        return Ok(());
+    }
 
     let mut all_pick_data: Vec<_> = players.iter()
         .map(|p| to_pick_data(p, &composition))
@@ -79,19 +97,19 @@ fn main() -> io::Result<()> {
     }
     
     println!("\n    Team total: {} + {} = {}", total_off, total_def, total_off + total_def);
-    print!("\nPress 'Enter' to quit.");
-    io::stdout().flush().unwrap();
-    io::stdin().read_line(&mut String::new()).unwrap();
+    pause();
 
     Ok(())
 }
 
 fn check_files_exist() -> io::Result<()> {
     if !Path::new("composition.txt").exists() {
+        println!("composition.txt not found. Creating default file.\n");
         fs::write("composition.txt", DEFAULT_COMPOSITION)?;
     }
 
     if !Path::new("team_data.txt").exists() {
+        println!("team_data.txt not found. Creating default file.\n");
         fs::write("team_data.txt", DEFAULT_TEAM_DATA)?;
     }
 
