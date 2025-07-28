@@ -7,13 +7,19 @@ mod evaluator;
 mod pick;
 mod lineup;
 
+use std::fs;
+use std::io::{self, Write};
+use std::path::Path;
 use roster::read_roster;
 use composition::parse_composition;
 use pick::to_pick_data;
 use lineup::optimize_lineup;
-use std::io::{self, Write};
 
-fn main() -> std::io::Result<()> {
+
+fn main() -> io::Result<()> {
+    // Create default files if they don't exist
+    check_files_exist()?;
+
     let players = read_roster("team_data.txt")?;
     let composition = parse_composition("composition.txt")?;
 
@@ -30,7 +36,7 @@ fn main() -> std::io::Result<()> {
     let (optimized_team, _) = optimize_lineup(&all_pick_data, initial, &composition);
 
     
-    let mut sorted_team = optimized_team.clone();
+    let mut sorted_team = optimized_team;
     sorted_team.sort_by_key(|p| {
         let pos = &p.offense.position;
         let sort_key = match pos.as_str() {
@@ -79,3 +85,31 @@ fn main() -> std::io::Result<()> {
 
     Ok(())
 }
+
+fn check_files_exist() -> io::Result<()> {
+    if !Path::new("composition.txt").exists() {
+        fs::write("composition.txt", DEFAULT_COMPOSITION)?;
+    }
+
+    if !Path::new("team_data.txt").exists() {
+        fs::write("team_data.txt", DEFAULT_TEAM_DATA)?;
+    }
+
+    Ok(())
+}
+
+const DEFAULT_COMPOSITION: &str = "\
+Offense: RN RN RN GN GN BK BK BK
+Defense: DL DL DL CV CV LB LB LB
+
+RN=max(HB,QB)
+GN=GN
+BK=BK
+DL=DL
+CV=CV
+LB=LB
+";
+
+const DEFAULT_TEAM_DATA: &str = "\
+Name XP TV OVR RN HB QB GN BK DL LB CV Spd Str Agl Stm Tck Blk Ddg BrB Hnd Pas Vis Bru Dur Sal
+";
