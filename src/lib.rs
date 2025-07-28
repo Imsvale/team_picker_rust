@@ -1,3 +1,4 @@
+// src/lib.rs
 pub mod player;
 pub mod roster;
 pub mod composition;
