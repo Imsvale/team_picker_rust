@@ -55,6 +55,8 @@ team_picker -c custom_comp.txt -t league_team.txt
 
 Formulas used in `composition.txt` can include stat variables, arithmetic, logic, comparisons, and built-in functions. All expressions are evaluated per player using their stats from `team_data.txt`.
 
+Whitespace is ignored.
+
 ### 🧑‍💻 Stat Variables
 
 You can reference any stat column defined in `team_data.txt`. Examples:
@@ -117,7 +119,3 @@ Function names are **case-insensitive**.
 | `NOT(x)`             | Logical NOT                                   | `NOT(0)` → `1`, `NOT(1)` → `0`     |
 | `AND(x, y)`          | Logical AND                                   | `AND(SPD > 5, STR > 5)`            |
 | `OR(x, y)`           | Logical OR                                    | `OR(SPD > 10, STR > 10)`           |
-
-### 🧼 Whitespace
-
-Whitespace is removed before parsing, and effectively ignored: `QB + HB` is equivalent to `QB+HB`.
