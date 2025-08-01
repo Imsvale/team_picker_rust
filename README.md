@@ -11,8 +11,45 @@ All credit to arkadye for the original implementation and logic.
 - Paste into `team_data.txt`.
 - Run the program.
 
-### Command line parameters
+## Command Line
 
+The program can be run via the command line. It accepts optional arguments to specify input file paths.
+
+```
+team_picker [-h] [-c <composition_file>] [-t <team_data_file>]
+```
+### Options:
+
+| Flag                   | Description                             |
+|------------------------|-----------------------------------------|
+| `-h`, `--help`         | Show this help text and exit            |
+| `-c`, `--composition`  | Path to the composition rules file      |
+| `-t`, `--team-data`    | Path to the team data file              |
+
+- If none are provided:
+  - The program defaults to `composition.txt` and `team_data.txt`.
+  - If these files do not exist:
+    - `composition.txt` is auto-created with a default set of rules.
+    - `team_data.txt` is auto-created with headers only (no players).
+    - → Paste your own player data into `team_data.txt`.
+
+### Example usage:
+
+Using defaults:
+
+```bash
+team_picker
+```
+Using the provided `team_data_example.txt` (players from Bulldozer Power):
+
+```bash
+team_picker -t team_data_example.txt
+```
+Specifying both:
+
+```bash
+team_picker -c custom_comp.txt -t league_team.txt
+```
 
 ## 🧮 Supported Expression Syntax
 
