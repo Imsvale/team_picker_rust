@@ -1,0 +1,9 @@
+Offense: RN RN RN GN GN BK BK BK
+Defense: DL DL DL CV CV LB LB LB
+
+RN=if(Spd > 50 && Stm > 50, pow(Spd+Stm, 0.5), 0)
+GN=max(QB,HB,BrB,Hnd) * if(QB > 30, 1, 0)
+BK=if((Dur+Stm)/2 < 40, 0, average(Dur,Stm,Vis,Sal))
+DL=if(Spd^2 > Str^2, Spd*1.5, Str*1.5)
+CV=if(Tck > 80 || Blk > 80, 100, (Tck+Blk)/2)
+LB=if(not(Tck == Blk), average(Tck,Blk,Ddg), 0)

@@ -1,14 +1,13 @@
 // src/roster.rs
 
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader};
-use std::fs::File;
+use std::io::{BufRead, Result};
 
+use crate::file_handling::open_file;
 use crate::player::Player;
 
-pub fn read_roster(path: &str) -> std::io::Result<Vec<Player>> {
-    let file = File::open(path)?;
-    let reader = BufReader::new(file);
+pub fn read_roster(path: &str) -> Result<Vec<Player>> {
+    let reader = open_file(path)?;
     let mut lines = reader.lines().filter_map(Result::ok);
 
     let mut players = Vec::new();

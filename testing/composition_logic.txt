@@ -1,0 +1,9 @@
+Offense: RN RN RN GN GN BK BK BK
+Defense: DL DL DL CV CV LB LB LB
+
+RN=if(Spd>Str, Spd, Str)
+GN=if(QB > 50 && HB > 50, 100, 0)
+BK=if(not(BrB < 10), 42, 0)
+DL=if(Spd > Str || Ddg > Blk, average(Spd,Ddg), average(Str,Blk))
+CV=if(Tck >= 60, 1, 0)
+LB=if(Dur != Stm, 1, 0)

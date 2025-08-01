@@ -1,0 +1,9 @@
+Offense: RN RN RN GN GN BK BK BK
+Defense: DL DL DL CV CV LB LB LB
+
+RN=max(HB,QB)               # Comment
+GN=GN                       // Another comment
+BK=BK * 70 / min(Dur, 70)   ; Yet another comment
+DL=DL * 50 / min(Dur, 50)
+CV=CV
+LB=LB

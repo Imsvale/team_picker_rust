@@ -1,8 +1,8 @@
 // src/composition.rs
 
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, Result};
+use crate::file_handling::open_file;
 
 #[derive(Debug, Clone)]
 pub struct PositionRequirements {
@@ -11,9 +11,8 @@ pub struct PositionRequirements {
     pub position_to_calculation: HashMap<String, String>,
 }
 
-pub fn parse_composition(path: &str) -> std::io::Result<PositionRequirements> {
-    let file = File::open(path)?;
-    let reader = BufReader::new(file);
+pub fn parse_composition(path: &str) -> Result<PositionRequirements> {
+    let reader = open_file(path)?;
 
     let mut requirements = PositionRequirements {
         attacking: Vec::new(),
@@ -23,15 +22,21 @@ pub fn parse_composition(path: &str) -> std::io::Result<PositionRequirements> {
 
     for line in reader.lines() {
         let line = line?;
-        let line = line.trim();
+        let line = trim_comment(&line);
 
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
 
         if let Some((lhs, rhs)) = line.split_once('=') {
+
+            // println!("Before: key='{}', value='{}'", lhs, rhs);
+
             let key = lhs.trim().to_string();
             let value = rhs.trim().to_string();
+
+            // println!("After: key='{}', value='{}'", key, value);
+
             requirements.position_to_calculation.insert(key, value);
             continue;
         }
@@ -47,4 +52,19 @@ pub fn parse_composition(path: &str) -> std::io::Result<PositionRequirements> {
     }
 
     Ok(requirements)
+}
+
+fn trim_comment(line: &str) -> &str {
+    line
+        // Trim # comment
+        .split('#').next().unwrap()
+
+        // Trim // comment
+        .split("//").next().unwrap()
+
+        // Trim ; comment
+        .split(';').next().unwrap()
+
+        // Trim whitespace
+        .trim()
 }

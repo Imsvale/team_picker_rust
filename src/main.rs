@@ -1,19 +1,22 @@
 // src/main.rs
+use std::io::{self, Write};
 
-mod player;
-mod roster;
+mod cli;
 mod composition;
 mod evaluator;
-mod pick;
+mod file_handling;
 mod lineup;
+mod pick;
+mod player;
+mod roster;
+mod testing;
 
-use std::fs;
-use std::io::{self, Write};
-use std::path::Path;
-use roster::read_roster;
+use cli::*;
 use composition::parse_composition;
-use pick::to_pick_data;
 use lineup::optimize_lineup;
+use pick::to_pick_data;
+use roster::read_roster;
+use file_handling::check_default_files_exist;
 
 fn pause() {
     print!("\nPress 'Enter' to quit.");
@@ -22,16 +25,26 @@ fn pause() {
 }
 
 fn main() -> io::Result<()> {
+    let config = match from_args() {
+        ArgParseResult::Exit => return Ok(()),
+        ArgParseResult::Config(config) => config,
+    };
+    
     // Create default files if they don't exist
-    check_files_exist()?;
+    if config.using_defaults {
+        if let Err(e) = check_default_files_exist() {
+            println!("{e}");
+            pause();
+            return Ok(());
+        }
+    }
 
-    let players = read_roster("team_data.txt")?;
-    let composition = parse_composition("composition.txt")?;
+    let composition = parse_composition(&config.comp_file)?;
+    let players = read_roster(&config.team_file)?;
 
     if players.len() < composition.attacking.len() {
         println!(
-            "ERROR\n\
-            Not enough players in team_data.txt.\n\
+            "Not enough players in team_data.txt.\n\
             Found {}, but at least {} are required.",
             players.len(),
             composition.attacking.len()
@@ -101,33 +114,3 @@ fn main() -> io::Result<()> {
 
     Ok(())
 }
-
-fn check_files_exist() -> io::Result<()> {
-    if !Path::new("composition.txt").exists() {
-        println!("composition.txt not found. Creating default file.\n");
-        fs::write("composition.txt", DEFAULT_COMPOSITION)?;
-    }
-
-    if !Path::new("team_data.txt").exists() {
-        println!("team_data.txt not found. Creating default file.\n");
-        fs::write("team_data.txt", DEFAULT_TEAM_DATA)?;
-    }
-
-    Ok(())
-}
-
-const DEFAULT_COMPOSITION: &str = "\
-Offense: RN RN RN GN GN BK BK BK
-Defense: DL DL DL CV CV LB LB LB
-
-RN=max(HB,QB)
-GN=GN
-BK=BK
-DL=DL
-CV=CV
-LB=LB
-";
-
-const DEFAULT_TEAM_DATA: &str = "\
-Name XP TV OVR RN HB QB GN BK DL LB CV Spd Str Agl Stm Tck Blk Ddg BrB Hnd Pas Vis Bru Dur Sal
-";

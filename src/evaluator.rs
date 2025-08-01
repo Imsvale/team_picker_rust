@@ -5,6 +5,7 @@ use crate::player::Player;
 use crate::composition::PositionRequirements;
 
 #[allow(dead_code)]
+
 #[derive(Debug)]
 pub enum EvalError {
     InvalidSyntax(String),
@@ -14,54 +15,153 @@ pub enum EvalError {
     MissingArguments,
 }
 
-pub type EvalResult = Result<f64, EvalError>;
+type EvalResult = Result<f64, EvalError>;
 
 pub fn evaluate(player: &Player, expr: &str) -> EvalResult {
-    let mut parser = Parser::new(player, expr);
-    let result = parser.parse_expression();
-    if parser.peek().is_some() {
-        Err(EvalError::InvalidSyntax("Unexpected characters at end".into()))
-    } else {
-        result
+
+    // Remove whitespace to greatly simplify parsing!
+    let expr = expr.chars().filter(|c| !c.is_whitespace()).collect::<String>();
+    let mut parser = Parser::new(player, &expr);
+
+    match parser.parse_expression() {
+        Ok(value) => {
+            if parser.peek().is_some() {
+                Err(EvalError::InvalidSyntax("Unexpected characters at end".into()))
+            } else {
+                Ok(value)
+            }
+        }
+        Err(e) => Err(e)
     }
 }
+
+
+use std::iter::Peekable;
 
 struct Parser<'a> {
     player: &'a Player,
-    chars: Chars<'a>,
-    lookahead: Option<char>,
+    chars: Peekable<Chars<'a>>,
 }
+
 
 impl<'a> Parser<'a> {
     fn new(player: &'a Player, expr: &'a str) -> Self {
-        let mut chars = expr.chars();
-        let lookahead = chars.next();
-        Parser { player, chars, lookahead }
+        let chars = expr.chars().peekable();
+        Parser { player, chars }
     }
 
+    fn peek(&mut self) -> Option<char> {
+        self.chars.peek().copied()
+    }
+    
     fn bump(&mut self) {
-        self.lookahead = self.chars.next();
+        self.chars.next();
     }
-
-    fn peek(&self) -> Option<char> {
-        self.lookahead
-    }
-
-    fn consume_whitespace(&mut self) {
-        while matches!(self.peek(), Some(c) if c.is_whitespace()) {
+    
+    fn consume_symbol(&mut self, sym: &str) -> bool {
+        let saved = self.chars.clone();
+        let mut matched = true;
+    
+        for expected in sym.chars() {
+            if Some(expected) != self.peek() {
+                matched = false;
+                break;
+            }
             self.bump();
+        }
+    
+        if matched {
+            true
+        } else {
+            self.chars = saved;
+            false
         }
     }
 
-    fn parse_expression(&mut self) -> EvalResult {
-        self.parse_add_sub()
+    fn consume_comparison_operator(&mut self) -> Result<String, EvalError> {
+        let mut op = String::new();
+        if let Some(c) = self.peek() {
+            op.push(c);
+            self.bump();
+    
+            if let Some('=') = self.peek() {
+                op.push('=');
+                self.bump();
+            }
+    
+            return Ok(op);
+        }
+        Err(EvalError::InvalidSyntax("Expected comparison operator".into()))
     }
+    
+
+    fn parse_expression(&mut self) -> EvalResult {
+        self.parse_logic_or()
+    }
+
+    fn parse_logic_or(&mut self) -> EvalResult {
+        let mut value = self.parse_logic_and()?;
+    
+        loop {
+            if self.consume_symbol("||") {
+                let rhs = self.parse_logic_and()?;
+                value = ((value != 0.0) || (rhs != 0.0)) as i32 as f64;
+            } else {
+                break;
+            }
+        }
+    
+        Ok(value)
+    }
+
+    fn parse_logic_and(&mut self) -> EvalResult {
+        let mut value = self.parse_comparison()?;
+    
+        loop {
+            if self.consume_symbol("&&") {
+                let rhs = self.parse_comparison()?;
+                value = ((value != 0.0) && (rhs != 0.0)) as i32 as f64;
+            } else {
+                break;
+            }
+        }
+    
+        Ok(value)
+    }
+    
+    
+    fn parse_comparison(&mut self) -> EvalResult {
+        let left = self.parse_add_sub()?;  // parse lhs expression
+    
+        if let Some(op) = self.peek() {
+            match op {
+                '>' | '<' | '=' | '!' => {
+                    let op_str = self.consume_comparison_operator()?;
+                    let right = self.parse_add_sub()?;
+                    return Ok(match op_str.as_str() {
+                        ">"  => (left >  right) as i32 as f64,
+                        ">=" => (left >= right) as i32 as f64,
+                        "<"  => (left <  right) as i32 as f64,
+                        "<=" => (left <= right) as i32 as f64,
+                        "==" => (left == right) as i32 as f64,
+                        "!=" => (left != right) as i32 as f64,
+                        _ => return Err(EvalError::InvalidSyntax(format!("Unknown comparison: {op_str}")))
+                    });
+                }
+                _ => {}
+            }
+        }
+    
+        Ok(left)
+    }
+    
+    
+    
 
     fn parse_add_sub(&mut self) -> EvalResult {
         let mut value = self.parse_mul_div()?;
 
         loop {
-            self.consume_whitespace();
             match self.peek() {
                 Some('+') => {
                     self.bump();
@@ -82,7 +182,6 @@ impl<'a> Parser<'a> {
         let mut value = self.parse_pow()?;
 
         loop {
-            self.consume_whitespace();
             match self.peek() {
                 Some('*') => {
                     self.bump();
@@ -107,7 +206,6 @@ impl<'a> Parser<'a> {
         let mut base = self.parse_atom()?;
 
         loop {
-            self.consume_whitespace();
             if self.peek() == Some('^') {
                 self.bump();
                 let exponent = self.parse_atom()?;
@@ -121,15 +219,37 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_atom(&mut self) -> EvalResult {
-        self.consume_whitespace();
+        
+        // Unary minus
+        if self.consume_symbol("-") {
+            return Ok(-self.parse_atom()?);
+        }
+        
+        // Negation with !
+        if self.consume_symbol("!") {
+        
+            let value = if self.peek() == Some('(') {
+                self.bump(); // consume '('
+                let v = self.parse_expression()?;
 
+                if self.peek() != Some(')') {
+                    return Err(EvalError::InvalidSyntax("Expected ')' after !(...)".to_string()));
+                }
+                self.bump();
+                v
+            } else {
+                self.parse_atom()?
+            };
+        
+            return Ok((value == 0.0) as i32 as f64);
+        }
+    
         match self.peek() {
             Some(c) if c.is_ascii_digit() || c == '.' => self.parse_number(),
             Some(c) if c.is_ascii_alphabetic() => self.parse_identifier_or_function(),
             Some('(') => {
                 self.bump();
                 let value = self.parse_expression()?;
-                self.consume_whitespace();
                 if self.peek() != Some(')') {
                     return Err(EvalError::InvalidSyntax("Expected ')'".into()));
                 }
@@ -140,6 +260,7 @@ impl<'a> Parser<'a> {
             None => Err(EvalError::InvalidSyntax("Unexpected end of input".into())),
         }
     }
+    
 
     fn parse_number(&mut self) -> EvalResult {
         let mut s = String::new();
@@ -152,12 +273,21 @@ impl<'a> Parser<'a> {
 
     fn parse_identifier_or_function(&mut self) -> EvalResult {
         let mut name = String::new();
-        while matches!(self.peek(), Some(c) if c.is_ascii_alphanumeric() || c == '_') {
-            name.push(self.peek().unwrap());
-            self.bump();
+        
+        
+        while let Some(c) = self.peek() {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                name.push(c);
+                self.bump();
+            } else {
+                break;
+            }
         }
 
-        self.consume_whitespace();
+        if name.is_empty() {
+            return Err(EvalError::InvalidSyntax("Expected identifier".into()));
+        }
+
         if self.peek() == Some('(') {
             self.bump(); // consume '('
             let args = self.parse_arguments()?;
@@ -171,14 +301,12 @@ impl<'a> Parser<'a> {
         let mut args = Vec::new();
 
         loop {
-            self.consume_whitespace();
             if self.peek() == Some(')') {
                 self.bump();
                 break;
             }
 
             args.push(self.parse_expression()?);
-            self.consume_whitespace();
 
             match self.peek() {
                 Some(',') => {
@@ -226,11 +354,34 @@ impl<'a> Parser<'a> {
                     Ok(args[0].powf(args[1]))
                 }
             }
+            "NOT" => {
+                if args.len() != 1 {
+                    Err(EvalError::MissingArguments)
+                } else {
+                    Ok((args[0] == 0.0) as i32 as f64)
+                }
+            }
+            "AND" => {
+                if args.len() != 2 {
+                    Err(EvalError::MissingArguments)
+                } else {
+                    Ok(((args[0] != 0.0) && (args[1] != 0.0)) as i32 as f64)
+                }
+            }
+            "OR" => {
+                if args.len() != 2 {
+                    Err(EvalError::MissingArguments)
+                } else {
+                    Ok(((args[0] != 0.0) || (args[1] != 0.0)) as i32 as f64)
+                }
+            }
+            
             other => Err(EvalError::UnknownFunction(other.to_string())),
         }
     }
 
     fn lookup_stat(&self, name: &str) -> EvalResult {
+        
         for (key, value) in &self.player.stats {
             if key.eq_ignore_ascii_case(name) {
                 return Ok(*value as f64);
@@ -249,4 +400,3 @@ pub fn evaluate_position(player: &Player, position: &str, reqs: &PositionRequire
 
     evaluate(player, expr)
 }
-

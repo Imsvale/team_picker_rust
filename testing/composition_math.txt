@@ -1,0 +1,9 @@
+Offense: RN RN RN GN GN BK BK BK
+Defense: DL DL DL CV CV LB LB LB
+
+RN=pow(Spd,2)+pow(Str,2)   # Pythagorean-like score
+GN=average(QB,HB,BrB,Hnd)
+BK=min(Dur,Stm,Vis,Sal)
+DL=max(Blk^2,Str)
+CV=(Stm+Dur+Tck)/3
+LB=average(Tck,Blk,Ddg)
